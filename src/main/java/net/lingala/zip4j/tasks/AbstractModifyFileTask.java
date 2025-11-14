@@ -103,12 +103,32 @@ abstract class AbstractModifyFileTask<T> extends AsyncZipTask<T> {
 
   private void restoreFileName(File zipFile, File temporaryZipFile) throws ZipException {
     if (zipFile.delete()) {
-      if (!temporaryZipFile.renameTo(zipFile)) {
+      if (!renameFile(temporaryZipFile, zipFile)) {
         throw new ZipException("cannot rename modified zip file");
       }
     } else {
       throw new ZipException("cannot delete old zip file");
     }
+  }
+
+  private boolean renameFile(File source, File target) throws ZipException {
+    int attempts = 3;
+    long delayMillis = 100;
+
+    for (int i = 0; i < attempts; i++) {
+      if (source.renameTo(target)) {
+        return true;
+      }
+
+      try {
+        Thread.sleep(delayMillis);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new ZipException("interrupted");
+      }
+    }
+
+    return false;
   }
 
   private int getIndexOfFileHeader(List<FileHeader> allFileHeaders, FileHeader fileHeaderForIndex) throws ZipException {
